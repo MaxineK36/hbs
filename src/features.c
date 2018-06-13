@@ -21,7 +21,9 @@ struct command
 struct command features[] =
 {
     {"create", create},
-//    {"enter", enter},
+    {"enter", enter},
+    {"exit", leave},
+    {"leave", leave},
     {"help", help},
     {"quit", quit},
     {"q", quit},
@@ -62,52 +64,130 @@ int exec(char* arg, char* sups[])
 int create(char** sups)
 {
     log_info("in create");
-    char* args[3];
+    if (!sups[0] || !sups[1]) {
+        log_warn("insufficient arguments");
+        log_debug("sups[0] is %s",sups[0]);
+        log_debug("sups[1] is %s",sups[1]);
+        return 0;
+    }
     switch (pof(sups[0]))
     {
     case 1:
         log_debug("creating a project");
-        /* Makes and enters folder for project */
-        args[0] = "mkdir";
-        args[1] = malloc(1000);
-        args[2] = NULL;
-        curr_proj = strdup(sups[1]);
-        sprintf(args[1],"%s%s",initial_path, curr_proj);
-        log_trace("args[1] is %s",args[1]);
-        lsh_launch(args);
-
-        /* Create index.html file */
-        log_debug("creating its index file");
-        char* fargs[2];
-        fargs[0] = "file";
-        fargs[1] = "index";
-        create(fargs);
-
-        return 1;
+        return create_proj(sups[1]);
     case 2:
         log_debug("creating a file");
-        /* Makes sure a project is specified */
-        if (!curr_proj) {
-            log_warn("no project specified");
-            printf("No project was specified.\n");
-            return 0;
-        }
+        return create_file(sups[1]);
+    default:
+        log_trace("sups[0] was %s", sups[0]);
+        log_warn("improper sups[0] specified");
+        return 0;
+    }
+}
 
-        /* Creates a new file in the specified project */
-        args[0] = "touch";
-        args[1] = malloc(1000);
-        args[2] = NULL;
-        sprintf(args[1],"%s%s/%s.html",initial_path, curr_proj, sups[1]);
-        log_trace("args[1] is %s",args[1]);
-        lsh_launch(args);
+int create_proj(char* proj_name)
+{
+    log_info("in proj_create");
 
-        /* Sets current file to the file you just created */
-        curr_file = sups[1];        
+    /* Makes folder for project */
+    char* args[3];
+    args[0] = "mkdir";
+    args[1] = malloc(1000);
+    args[2] = NULL;
+    sprintf(args[1],"%s%s",initial_path, proj_name);
+    log_trace("args[1] is %s",args[1]);
+    lsh_launch(args);
 
+    /* Enters project */ 
+    curr_proj = strdup(proj_name);
+    log_trace("current project is %s",curr_proj);
+
+    /* Create index.html file */
+    create_file("index");
+    return 1;
+}
+
+int create_file(char* file_name)
+{
+    log_info("in file_create");
+
+    /* Makes sure a project is specified */
+    if (!curr_proj) {
+        log_warn("no project specified");
+        printf("No project was specified.\n");
+        return 0;
+    }
+
+    /* Creates a new file in the specified project */
+    char* args[3];
+    args[0] = "touch";
+    args[1] = malloc(1000);
+    args[2] = NULL;
+    sprintf(args[1],"%s%s/%s.html",initial_path, curr_proj, file_name);
+    log_trace("args[1] is %s",args[1]);
+    lsh_launch(args);
+
+    /* Sets current file to the file you just created */
+    curr_file = strdup(file_name);        
+    log_trace("current file is %s", curr_file);
+    return 1;
+}
+
+int enter(char** sups)
+{
+    log_info("in enter");
+    if (!sups[0] || !sups[1]) {
+        log_warn("insufficient arguments");
+        log_debug("sups[0] is %s",sups[0]);
+        log_debug("sups[1] is %s",sups[1]);
+        return 0;
+    }
+    switch (pof(sups[0]))
+    {
+    case 1:
+        log_debug("entering a project");
+        curr_proj = strdup(sups[1]);
+        curr_file = "index";
+        log_trace("current project is %s",curr_proj);
+        log_trace("current file is %s", curr_file);
+        return 1;
+    case 2:
+        log_debug("entering a file");
+        curr_file = strdup(sups[1]);
+        log_trace("current file is %s", curr_file);
         return 1;
     default:
         log_trace("sups[0] was %s", sups[0]);
-        log_warn("no sups[0] specified");
+        log_warn("improper sups[0] specified");
+        return 0;
+    }
+}
+
+int leave(char** sups)
+{
+    log_info("in exit");
+    if (!sups[0]) {
+        log_warn("insufficient arguments");
+        log_debug("sups[0] is %s",sups[0]);
+        return 0;
+    }
+    switch (pof(sups[0]))
+    {
+    case 1:
+        log_debug("exiting a project");
+        curr_proj = NULL;
+        curr_file = NULL;
+        log_trace("current project is %s",curr_proj);
+        log_trace("current file is %s", curr_file);
+        return 1;
+    case 2:
+        log_debug("exiting a file");
+        curr_file = NULL;
+        log_trace("current file is %s", curr_file);
+        return 1;
+    default:
+        log_trace("sups[0] was %s", sups[0]);
+        log_warn("improper sups[0] specified");
         return 0;
     }
 }

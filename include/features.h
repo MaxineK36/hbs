@@ -9,8 +9,34 @@ int exec(char* arg, char* sups[]);
 /* Takes an input of supplementary arguments
  * Interprets the first to indicate creating either a file or a folder
  * Uses the second as the name of the file or folder
+ * Creates a file/folder accordingly
  * Returns 1, 0, or -1 as described above */
 int create(char** sups);
+
+/* Creates and enters a project with a given name
+ * Returns 1 on success 
+ */
+int create_proj(char* proj_name);
+
+/* Creates and enters a file with a given name
+ * Returns 1 on success 
+ */
+int create_file(char* file_name);
+
+/* Takes an input of supplementary arguments
+ * Interprets the first to indicate entering either a file or a folder
+ * Uses the second as the name of the file or folder
+ * Enters a file/folder accordingl (sets curr_proj or curr_file)
+ * If entering a folder, enters file "index.hml" automatically
+ * Returns 1, 0, or -1 as described above */
+int enter(char** sups);
+
+/* Takes an input of supplementary arguments
+ * Interprets the first to indicate entering either a file or a folder
+ * Leaves current file/folder accordingly
+ * If leaves a folder, exit file as well (sets curr_proj and curr_file to NULL) 
+ * Returns 1, 0, or -1 as described above */
+int leave(char** sups);
 
 /* Returns -2, does nothing else*/
 int quit(char** sups);
