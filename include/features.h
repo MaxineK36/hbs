@@ -1,5 +1,3 @@
-#include "../api/include/trie.h"
-#include "etrie.h"
 
 /* When given the function and its arguments, excecutes the relevant function
  * Returns -2 if the input is "quit"
@@ -29,6 +27,12 @@ void std_indent(char* string);
  * Takes a string and a number n, prints the string with each line indented n spaces
  */
 void print_indented_n(char* string, int indent);
+
+/* Function to launch a child process and execute a function
+ * Taken from:
+ * https://github.com/brenns10/lsh/blob/407938170e8b40d231781576e05282a41634848c/src/main.c
+ */
+int lsh_launch(char **args);
 
 
 /*

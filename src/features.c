@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "../include/features.h"
 
 /* Setup to allow for handler array */
@@ -17,7 +19,7 @@ struct command
 struct command features[] =
 {
     {"create", create},
-    {"enter", enter},
+//    {"enter", enter},
     {"help", help},
     {"quit", quit},
     {"q", quit},
@@ -28,8 +30,7 @@ struct command features[] =
 int num_features = sizeof(features) / sizeof(struct command);
 
 /* Initializing path variable */
-char* path = malloc(1000);
-path = "";
+char* path = "";
 
 int exec(char* arg, char* sups[])
 {
@@ -49,15 +50,21 @@ int create(char** sups)
         return 0;
     }
     if (!strcmp(sups[0],"project")) {
-        execlp("mkdir","mkdir",sups[1]);
+        char* args[2];
+        args[0] = "mkdir";
+        args[1] = sups[1];
+//        execvp("mkdir",args);
+        lsh_launch(args);
     } else if (!strcmp(sups[0],"file")) {
-        char* file = malloc(50+strlen(path))
-        file = strdup(path);
-        strcat(file, sups[1])
-        execlp("touch","touch",file);
+        char* args[3];
+        args[0] = "touch";
+        args[1] = path;
+        args[2] = sups[1];
+        lsh_launch(args);
     } else {
         return 0;   
     }
+    return 1;
 }
 
 //to add, echo "hello" >> <filename>
@@ -189,3 +196,27 @@ void print_indented_n(char* string, int indent)
     printf("%s",new_str);
 }
 
+int lsh_launch(char **args)
+{
+  pid_t pid, wpid;
+  int status;
+
+  pid = fork();
+  if (pid == 0) {
+    // Child process
+    if (execvp(args[0], args) == -1) {
+      perror("lsh");
+    }
+    exit(EXIT_FAILURE);
+  } else if (pid < 0) {
+    // Error forking
+    perror("lsh");
+  } else {
+    // Parent process
+    do {
+      wpid = waitpid(pid, &status, WUNTRACED);
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+  }
+
+  return 1;
+}
