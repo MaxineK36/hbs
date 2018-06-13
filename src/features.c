@@ -29,15 +29,14 @@ struct command features[] =
 /* Number of features */
 int num_features = sizeof(features) / sizeof(struct command);
 
-/* Inial path variable (to see if a project has been created)  */
+/* Inial curr_proj variable (to see if a project has been created)  */
 char* initial_path = "../";
 
-/* Additional path variable (to be updated) */
-char* path = NULL;
+/* Additional curr_proj variable (to be updated) */
+char* curr_proj = NULL;
 
 int exec(char* arg, char* sups[])
 {
-    printf("in exec\n");
     for (int i = 0; i < num_features; i++)
     {
         if (strcmp(features[i].command, arg) == 0)
@@ -50,34 +49,38 @@ int exec(char* arg, char* sups[])
 
 int create(char** sups)
 {
-    printf("in create\n");
     if (sups[1] == NULL) {
         return 0;
     }
     if (!strcmp(sups[0],"project")) {
         /* Makes and enters folder for project */
-        char* args[2];
+        char* args[3];
         args[0] = "mkdir";
-        args[1] = malloc(50);
-        path = sups[1];
-        sprintf(args[1],"%s%s",initial_path, path);
+        args[1] = malloc(1000);
+        args[2] = NULL;
+        curr_proj = strdup(sups[1]);
+        sprintf(args[1],"%s%s",initial_path, curr_proj);
         lsh_launch(args);
 
         /* Create index.html file */
         char* fargs[2];
         fargs[0] = "file";
-        fargs[1] = "index.html";
+        fargs[1] = "index";
         create(fargs);
 
     } else if (!strcmp(sups[0],"file")) {
-        if (!path) {
+        /* Makes sure a project is specified */
+        if (!curr_proj) {
             printf("No project was specified.\n");
             return 0;
         }
-        char* args[2];
+
+        /* Creates a new file in the specified project */
+        char* args[3];
         args[0] = "touch";
-        args[1] = malloc(50);
-        sprintf(args[1],"%s%s/%s",initial_path, path, sups[1]);
+        args[1] = malloc(1000);
+        args[2] = NULL;
+        sprintf(args[1],"%s%s/%s.html",initial_path, curr_proj, sups[1]);
         lsh_launch(args);
     } else {
         return 0;   
@@ -91,6 +94,31 @@ int quit(char** sups)
 {
     sups++;
     return -2;
+}
+
+int lsh_launch(char **args)
+{
+  pid_t pid, wpid;
+  int status;
+
+  pid = fork();
+  if (pid == 0) {
+    // Child process
+    if (execvp(args[0], args) == -1) {
+      perror("lsh");
+    }
+    exit(EXIT_FAILURE);
+  } else if (pid < 0) {
+    // Error forking
+    perror("lsh");
+  } else {
+    // Parent process
+    do {
+      wpid = waitpid(pid, &status, WUNTRACED);
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+  }
+
+  return 1;
 }
 
 int help(char** sups)
@@ -192,8 +220,9 @@ void print_indented_n(char* string, int indent)
     int i = 0;
     int i_n = 0;
     char* new_str = calloc(1,2*strlen(string));
-    for (; i_n < indent; i_n++)
+    for (; i_n < indent; i_n++) {
         new_str[i_n] = ' ';
+    }
     while (string[i])
     {
         if (string[i] == '\n')
@@ -209,45 +238,21 @@ void print_indented_n(char* string, int indent)
         i++;
     }
     int len = strlen(new_str);
-    for (int j = len; j >= len - indent; j--)
+    for (int j = len; j >= len - indent; j--) {
         new_str[j] = (new_str[j] == ' ') ? '\0' : ' ';
-    printf("%s",new_str);
-}
-
-int lsh_launch(char **args)
-{
-  pid_t pid, wpid;
-  int status;
-
-  pid = fork();
-  if (pid == 0) {
-    // Child process
-    if (execvp(args[0], args) == -1) {
-      perror("lsh");
     }
-    exit(EXIT_FAILURE);
-  } else if (pid < 0) {
-    // Error forking
-    perror("lsh");
-  } else {
-    // Parent process
-    do {
-      wpid = waitpid(pid, &status, WUNTRACED);
-    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-  }
-
-  return 1;
 }
 
-char* concat(char** strlist, int n)
+char* sepconcat(char** strlist, int n, char* sep)
 {
     int total_len = 0;
     for (int i = 0; i < n; i++){
        total_len += strlen(strlist[i]); 
     }
-    char* total_str = malloc(total_len+1);
+    char* total_str = malloc(total_len+n+1);
     total_str = strdup(strlist[0]);
     for (int i = 1; i < n; i++){
+        strcat(total_str, sep);
         strcat(total_str, strlist[i]);
     }
     return total_str; 
