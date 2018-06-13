@@ -29,11 +29,15 @@ struct command features[] =
 /* Number of features */
 int num_features = sizeof(features) / sizeof(struct command);
 
-/* Initializing path variable */
-char* path = "";
+/* Inial path variable (to see if a project has been created)  */
+char* initial_path = "../";
+
+/* Additional path variable (to be updated) */
+char* path = NULL;
 
 int exec(char* arg, char* sups[])
 {
+    printf("in exec\n");
     for (int i = 0; i < num_features; i++)
     {
         if (strcmp(features[i].command, arg) == 0)
@@ -46,20 +50,34 @@ int exec(char* arg, char* sups[])
 
 int create(char** sups)
 {
+    printf("in create\n");
     if (sups[1] == NULL) {
         return 0;
     }
     if (!strcmp(sups[0],"project")) {
+        /* Makes and enters folder for project */
         char* args[2];
         args[0] = "mkdir";
-        args[1] = sups[1];
-//        execvp("mkdir",args);
+        args[1] = malloc(50);
+        path = sups[1];
+        sprintf(args[1],"%s%s",initial_path, path);
         lsh_launch(args);
+
+        /* Create index.html file */
+        char* fargs[2];
+        fargs[0] = "file";
+        fargs[1] = "index.html";
+        create(fargs);
+
     } else if (!strcmp(sups[0],"file")) {
-        char* args[3];
+        if (!path) {
+            printf("No project was specified.\n");
+            return 0;
+        }
+        char* args[2];
         args[0] = "touch";
-        args[1] = path;
-        args[2] = sups[1];
+        args[1] = malloc(50);
+        sprintf(args[1],"%s%s/%s",initial_path, path, sups[1]);
         lsh_launch(args);
     } else {
         return 0;   
@@ -220,3 +238,18 @@ int lsh_launch(char **args)
 
   return 1;
 }
+
+char* concat(char** strlist, int n)
+{
+    int total_len = 0;
+    for (int i = 0; i < n; i++){
+       total_len += strlen(strlist[i]); 
+    }
+    char* total_str = malloc(total_len+1);
+    total_str = strdup(strlist[0]);
+    for (int i = 1; i < n; i++){
+        strcat(total_str, strlist[i]);
+    }
+    return total_str; 
+}
+

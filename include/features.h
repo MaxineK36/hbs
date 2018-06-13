@@ -35,6 +35,7 @@ void print_indented_n(char* string, int indent);
 int lsh_launch(char **args);
 
 
+char* concat(char **strlist, int n);
 /*
 const char* inputs = {
   "help",
