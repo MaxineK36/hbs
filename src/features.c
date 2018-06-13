@@ -5,6 +5,8 @@
 #include <sys/wait.h>
 #include "../include/features.h"
 
+#include "../lib/log.c/src/log.h"
+
 /* Setup to allow for handler array */
 typedef int (*command_function)(char** sups);
 
@@ -29,18 +31,28 @@ struct command features[] =
 /* Number of features */
 int num_features = sizeof(features) / sizeof(struct command);
 
-/* Inial curr_proj variable (to see if a project has been created)  */
+/* Initial path variable (where to put projects) */
 char* initial_path = "../";
 
-/* Additional curr_proj variable (to be updated) */
+/* Current project (to be updated) */
 char* curr_proj = NULL;
+
+/* Current file (to be updated) */
+char* curr_file = NULL;
+
+#define PROJ 1
+#define FILE 2
 
 int exec(char* arg, char* sups[])
 {
+    log_info("in exec");
+    log_trace("current project is %s",curr_proj);
+    log_trace("current file is %s",curr_file);
     for (int i = 0; i < num_features; i++)
     {
         if (strcmp(features[i].command, arg) == 0)
         {
+            log_debug("command was %s",arg);
             return features[i].func(sups);
         }
     }
@@ -49,43 +61,55 @@ int exec(char* arg, char* sups[])
 
 int create(char** sups)
 {
-    if (sups[1] == NULL) {
-        return 0;
-    }
-    if (!strcmp(sups[0],"project")) {
+    log_info("in create");
+    char* args[3];
+    switch (pof(sups[1]))
+    {
+    case 1:
+        log_debug("creating a project");
         /* Makes and enters folder for project */
-        char* args[3];
         args[0] = "mkdir";
         args[1] = malloc(1000);
         args[2] = NULL;
         curr_proj = strdup(sups[1]);
         sprintf(args[1],"%s%s",initial_path, curr_proj);
+        log_trace("args[1] is %s",args[1]);
         lsh_launch(args);
 
         /* Create index.html file */
+        log_debug("creating its index file");
         char* fargs[2];
         fargs[0] = "file";
         fargs[1] = "index";
         create(fargs);
 
-    } else if (!strcmp(sups[0],"file")) {
+        return 1;
+    case 2:
+        log_debug("creating a file");
         /* Makes sure a project is specified */
         if (!curr_proj) {
+            log_warn("no project specified");
             printf("No project was specified.\n");
             return 0;
         }
 
         /* Creates a new file in the specified project */
-        char* args[3];
         args[0] = "touch";
         args[1] = malloc(1000);
         args[2] = NULL;
         sprintf(args[1],"%s%s/%s.html",initial_path, curr_proj, sups[1]);
+        log_trace("args[1] is %s",args[1]);
         lsh_launch(args);
-    } else {
-        return 0;   
+
+        /* Sets current file to the file you just created */
+        curr_file = sups[1];        
+
+        return 1;
+    default:
+        log_trace("sups[1] was %s", sups[1]);
+        log_warn("no sups[1] specified");
+        return 0;
     }
-    return 1;
 }
 
 //to add, echo "hello" >> <filename>
@@ -256,5 +280,15 @@ char* sepconcat(char** strlist, int n, char* sep)
         strcat(total_str, strlist[i]);
     }
     return total_str; 
+}
+
+int pof(char* argument){
+    if (!strcmp(argument,"project")) {
+        return 1;
+    } else if (!strcmp(argument,"file")) {
+        return 2;
+    } else {
+        return 0;
+    }
 }
 

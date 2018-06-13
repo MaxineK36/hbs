@@ -34,8 +34,16 @@ void print_indented_n(char* string, int indent);
  */
 int lsh_launch(char **args);
 
+/* Concatenates a list of strings with a given separator
+ * Returns the final string
+ */
+char* sepconcat(char **strlist, int n, char* sep);
 
-char* concat(char **strlist, int n);
+/* Determines if the user is referring to a project or a file
+ * Returns 1 if project, 2 if file, 0 if argument was NULL)
+ */
+int pof(char* argument);
+
 /*
 const char* inputs = {
   "help",
