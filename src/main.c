@@ -40,13 +40,15 @@ int main(int argc, char* argv[])
               "To exit, type 'quit'\n\n");
 
     int verbosity = 0;
-    for (int i = 0; i < argc; i++) {
-        switch (argv[i][0]) {   
+    
+    int opt;
+    while ((opt = getopt(argc, argv, "vh")) != -1)
+        switch (opt)
+        {
         case 'v':
             verbosity++;
             break;
         }
-    }
     switch (verbosity) {
       case 0:
         log_set_level(LOG_FATAL + 1); break;

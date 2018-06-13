@@ -63,7 +63,7 @@ int create(char** sups)
 {
     log_info("in create");
     char* args[3];
-    switch (pof(sups[1]))
+    switch (pof(sups[0]))
     {
     case 1:
         log_debug("creating a project");
@@ -106,8 +106,8 @@ int create(char** sups)
 
         return 1;
     default:
-        log_trace("sups[1] was %s", sups[1]);
-        log_warn("no sups[1] specified");
+        log_trace("sups[0] was %s", sups[0]);
+        log_warn("no sups[0] specified");
         return 0;
     }
 }
