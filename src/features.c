@@ -7,6 +7,9 @@
 
 #include "../lib/log.c/src/log.h"
 
+#define PROJ 1
+#define FILE 2
+
 /* Setup to allow for handler array */
 typedef int (*command_function)(char** sups);
 
@@ -21,9 +24,13 @@ struct command
 struct command features[] =
 {
     {"create", create},
+    {"c", create},
     {"enter", enter},
+    {"e", enter},
     {"exit", leave},
     {"leave", leave},
+    {"l", leave},
+    {"add", add},
     {"help", help},
     {"quit", quit},
     {"q", quit},
@@ -42,8 +49,6 @@ char* curr_proj = NULL;
 /* Current file (to be updated) */
 char* curr_file = NULL;
 
-#define PROJ 1
-#define FILE 2
 
 int exec(char* arg, char* sups[])
 {
@@ -144,14 +149,14 @@ int enter(char** sups)
     }
     switch (pof(sups[0]))
     {
-    case 1:
+    case PROJ:
         log_debug("entering a project");
         curr_proj = strdup(sups[1]);
         curr_file = "index";
         log_trace("current project is %s",curr_proj);
         log_trace("current file is %s", curr_file);
         return 1;
-    case 2:
+    case FILE:
         log_debug("entering a file");
         curr_file = strdup(sups[1]);
         log_trace("current file is %s", curr_file);
@@ -166,21 +171,20 @@ int enter(char** sups)
 int leave(char** sups)
 {
     log_info("in exit");
-    if (!sups[0]) {
-        log_warn("insufficient arguments");
-        log_debug("sups[0] is %s",sups[0]);
-        return 0;
-    }
-    switch (pof(sups[0]))
+
+    //sets to project if no argument specified, runs pof otherwise
+    int temp_pof = sups[0] ? pof(sups[0]) : PROJ;
+    
+    switch (temp_pof)
     {
-    case 1:
+    case PROJ:
         log_debug("exiting a project");
         curr_proj = NULL;
         curr_file = NULL;
         log_trace("current project is %s",curr_proj);
         log_trace("current file is %s", curr_file);
         return 1;
-    case 2:
+    case FILE:
         log_debug("exiting a file");
         curr_file = NULL;
         log_trace("current file is %s", curr_file);
@@ -192,6 +196,92 @@ int leave(char** sups)
     }
 }
 
+/* Takes an input of supplementary arguments
+ * Interprets the first as the type of object to add
+ * Interprets the second as the id of the object
+ * Interprets the (optional) third to be 'to' 'after' or 'before'
+ * Interprets the (optional) fourth as what to add (to/after/before)
+ * Returns 1, 0, or -1 as described above */
+int add(char** sups)
+{
+    log_info("in add");
+    if (!sups[0] || !sups[1]) {
+        log_warn("insufficient arguments");
+        log_debug("sups[0] is %s",sups[0]);
+        log_debug("sups[1] is %s",sups[1]);
+        return 0;
+    }
+    char* type = sups[0]; //type of object
+    int tlen = strlen(type); //length of type string
+    char* id = sups[1]; //id for object
+    int idlen = strlen(id);
+    char* rel = sups[2]; //relation
+    char* loc = sups[3]; //location
+
+    log_debug("type is %s",type);
+    log_debug("id is %s",id);
+
+    char* arg[4];
+    arg[0] = "sed";
+    arg[1] = calloc(1,100);
+    char* command = calloc(1,100);
+//    arg[2] = malloc(tlen + 20);
+    arg[2] = malloc(strlen(curr_file) + 20);
+    arg[3] = NULL;
+/*
+    arg[4] = ">";
+    arg[5] = "tmp.txt";
+    arg[6] = NULL;
+*/
+
+    sprintf(command,"<%s\\ id=\"%s\"></%s>",type,id,type);
+    sprintf(arg[2],"%s%s/%s.html", initial_path, curr_proj, curr_file);
+
+    /* If a relation was specified */
+    if (rel){
+        log_debug("relation specified");
+        log_trace("relation is %s",rel);
+        /* Makes sure that a location was specified */
+        if (!loc) {
+            log_warn("there was a relation but no location");
+            return 0;
+        }
+        log_trace("location is %s",rel);
+
+        /* Determine *which* relation was specified, act accordinbly */
+        if (!strcmp(loc,"to")) {
+            sprintf(arg[1]," \'s/>/id=\"%s\">/",loc);
+        } else if (!strcmp(loc,"before")) {
+            sprintf(arg[1]," \'/id=\"%s\"/i",loc);
+        } else if (!strcmp(loc,"after")) {
+            sprintf(arg[1]," \'/id=\"%s\"/a",loc);
+        } else {
+            return 0;
+        }
+    } else {
+        log_debug("no relation specified");
+        sprintf(arg[1],"/<\\/html>/i\\%s",command);
+    }
+
+//    char* temp = malloc(1000);
+//    sprintf(temp,"%s %s %s %s %s %s",arg[1],arg[2],arg[3],arg[4],arg[5],arg[6]);
+//    log_trace("temp is %s",temp);
+
+//    char* sd_arg[3] = {"sed",temp,NULL};
+    lsh_launch(arg);
+
+//    char* mv_arg[4] = {"mv",arg[6],arg[4],NULL};
+//    lsh_launch(mv_arg);
+    
+    return 1;
+}
+
+/*
+'id="---"
+ sed  '/option/i <item> </item>' input
+sed 's/>/><span style="style0">/' file 
+*/
+
 //to add, echo "hello" >> <filename>
 
 int quit(char** sups)
@@ -202,25 +292,31 @@ int quit(char** sups)
 
 int lsh_launch(char **args)
 {
-  pid_t pid, wpid;
-  int status;
-
-  pid = fork();
-  if (pid == 0) {
-    // Child process
-    if (execvp(args[0], args) == -1) {
-      perror("lsh");
+    int i = 0;
+    while(args[i]){
+        log_trace("%s ",args[i]);
+        i++;
     }
-    exit(EXIT_FAILURE);
-  } else if (pid < 0) {
-    // Error forking
-    perror("lsh");
-  } else {
-    // Parent process
-    do {
-      wpid = waitpid(pid, &status, WUNTRACED);
-    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-  }
+
+    pid_t pid, wpid;
+    int status;
+
+    pid = fork();
+    if (pid == 0) {
+        // Child process
+        if (execvp(args[0], args) == -1) {
+            perror("lsh");
+        }
+        exit(EXIT_FAILURE);
+    } else if (pid < 0) {
+        // Error forking
+        perror("lsh");
+    } else {
+      // Parent process
+      do {
+          wpid = waitpid(pid, &status, WUNTRACED);
+      } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+}
 
   return 1;
 }
@@ -363,10 +459,10 @@ char* sepconcat(char** strlist, int n, char* sep)
 }
 
 int pof(char* argument){
-    if (!strcmp(argument,"project")) {
-        return 1;
-    } else if (!strcmp(argument,"file")) {
-        return 2;
+    if ((!strcmp(argument,"project"))||(!strcmp(argument,"p"))||(!strcmp(argument,"folder"))) {
+        return PROJ;
+    } else if ((!strcmp(argument,"file"))||(!strcmp(argument,"f"))) {
+        return FILE;
     } else {
         return 0;
     }

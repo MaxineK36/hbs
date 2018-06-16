@@ -52,11 +52,11 @@ int main(int argc, char* argv[])
     switch (verbosity) {
       case 0:
         log_set_level(LOG_FATAL + 1); break;
+//      case 1:
+//        log_set_level(LOG_INFO); break;
+//      case 1:
+//        log_set_level(LOG_DEBUG); break;
       case 1:
-        log_set_level(LOG_INFO); break;
-      case 2:
-        log_set_level(LOG_DEBUG); break;
-      case 3:
         log_set_level(LOG_TRACE); break;
     } 
     log_trace("Verbosity is %d",verbosity);
