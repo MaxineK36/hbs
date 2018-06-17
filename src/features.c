@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "../include/features.h"
 
 #include "../lib/log.c/src/log.h"
@@ -31,6 +33,9 @@ struct command features[] =
     {"leave", leave},
     {"l", leave},
     {"add", add},
+    {"a", add},
+    {"print", print},
+    {"p", print},
     {"help", help},
     {"quit", quit},
     {"q", quit},
@@ -211,31 +216,25 @@ int add(char** sups)
         log_debug("sups[1] is %s",sups[1]);
         return 0;
     }
+
     char* type = sups[0]; //type of object
-    int tlen = strlen(type); //length of type string
     char* id = sups[1]; //id for object
-    int idlen = strlen(id);
     char* rel = sups[2]; //relation
     char* loc = sups[3]; //location
 
     log_debug("type is %s",type);
     log_debug("id is %s",id);
 
-    char* arg[4];
+    char* arg[5];
     arg[0] = "sed";
-    arg[1] = calloc(1,100);
-    char* command = calloc(1,100);
-//    arg[2] = malloc(tlen + 20);
-    arg[2] = malloc(strlen(curr_file) + 20);
-    arg[3] = NULL;
-/*
-    arg[4] = ">";
-    arg[5] = "tmp.txt";
-    arg[6] = NULL;
-*/
+    arg[1] = "-i";
+    arg[2] = calloc(1,200);
+    char* to_add = calloc(1,200);
+    arg[3] = malloc(strlen(curr_file) + strlen(curr_proj) + 20);
+    arg[4] = NULL;
 
-    sprintf(command,"<%s\\ id=\"%s\"></%s>",type,id,type);
-    sprintf(arg[2],"%s%s/%s.html", initial_path, curr_proj, curr_file);
+    sprintf(to_add,"<%s\\ id=\"%s\"></%s>",type,id,type); //set up text to add
+    sprintf(arg[3],"%s%s/%s.html", initial_path, curr_proj, curr_file); //set up which file to edit
 
     /* If a relation was specified */
     if (rel){
@@ -246,43 +245,51 @@ int add(char** sups)
             log_warn("there was a relation but no location");
             return 0;
         }
-        log_trace("location is %s",rel);
+        log_trace("location is %s",loc);
 
         /* Determine *which* relation was specified, act accordinbly */
-        if (!strcmp(loc,"to")) {
-            sprintf(arg[1]," \'s/>/id=\"%s\">/",loc);
-        } else if (!strcmp(loc,"before")) {
-            sprintf(arg[1]," \'/id=\"%s\"/i",loc);
-        } else if (!strcmp(loc,"after")) {
-            sprintf(arg[1]," \'/id=\"%s\"/a",loc);
+        if (!strcmp(rel,"to")) {
+            sprintf(to_add,"<%s\\ id=\"%s\"><\\/%s>",type,id,type); //set up text to add
+            sprintf(arg[2],"s/id=\"%s\">/\\id=\"%s\">%s/",loc,loc,to_add);
+        } else if (!strcmp(rel,"before")) {
+            sprintf(arg[2],"/id=\"%s\"/i\\%s",loc,to_add);
+        } else if (!strcmp(rel,"after")) {
+            sprintf(arg[2],"/id=\"%s\"/a\\%s",loc,to_add);
         } else {
             return 0;
         }
     } else {
         log_debug("no relation specified");
-        sprintf(arg[1],"/<\\/html>/i\\%s",command);
+        sprintf(arg[2],"/<\\/html>/i\\%s",to_add);
     }
 
-//    char* temp = malloc(1000);
-//    sprintf(temp,"%s %s %s %s %s %s",arg[1],arg[2],arg[3],arg[4],arg[5],arg[6]);
-//    log_trace("temp is %s",temp);
-
-//    char* sd_arg[3] = {"sed",temp,NULL};
     lsh_launch(arg);
-
-//    char* mv_arg[4] = {"mv",arg[6],arg[4],NULL};
-//    lsh_launch(mv_arg);
-    
     return 1;
 }
 
-/*
-'id="---"
- sed  '/option/i <item> </item>' input
-sed 's/>/><span style="style0">/' file 
-*/
+int print(char** sups)
+{
+    if (!sups[0]){
+        printf("File name not specified.\n");
+        return 0;
+    }
+    char* filename = sups[0];
+    char* full_file_path = calloc(1,100);
 
-//to add, echo "hello" >> <filename>
+    sprintf(full_file_path,"%s%s/%s.html", initial_path, curr_proj, filename);
+    struct stat buffer;
+    int exist = stat(full_file_path,&buffer);
+    if (exist != 0) {
+        printf("This file does not exist in the given project.\n");
+        return 0;
+    }
+
+    char* args[3] = {"cat",full_file_path,NULL};
+    lsh_launch(args);
+    //http://www.zentut.com/c-tutorial/c-file-exists/
+
+    return 1;
+}
 
 int quit(char** sups)
 {

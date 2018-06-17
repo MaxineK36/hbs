@@ -43,8 +43,15 @@ int leave(char** sups);
  * Interprets the second as the id of the object
  * Interprets the (optional) third to be 'to' 'after' or 'before'
  * Interprets the (optional) fourth as what to add to(/after/before)
+ * Adds object accordingly
  * Returns 1, 0, or -1 as described above */
 int add(char** sups);
+
+/* Takes an input of supplementary arguments
+ * Interprets the first as the name of a file to display
+ * Displays the contents of the requested file
+ * Returns 1, 0, or -1 as described above */
+int print(char** sups);
 
 /* Returns -2, does nothing else*/
 int quit(char** sups);

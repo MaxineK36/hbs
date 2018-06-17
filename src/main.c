@@ -10,6 +10,7 @@
 
 int parse(char* input)
 {
+    log_info("in parse");
     char* separator = " ";
     char* parsed = strtok(input, separator);
     char* arg = parsed;
@@ -23,8 +24,10 @@ int parse(char* input)
         index++;
         parsed = strtok(NULL, separator);
     }
+    log_trace("got args");
 
     int final = exec(arg, sups);
+    log_trace("exec returned %d",final);
     if (final == 0)
         printf("Invalid input; please try again.\n"
                "For a list of commands, type help\n");
@@ -64,8 +67,10 @@ int main(int argc, char* argv[])
     int run = 1;
     while (run != -2)
     {
+        log_trace("about to look for input");
         char* input = readline("> ");
         run = parse(input);
+        log_trace("parse returned %d",run);
     }
     printf("Exited.\n");
     return 0;
